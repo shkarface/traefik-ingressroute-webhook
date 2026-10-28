@@ -79,9 +79,9 @@ securityContext:
 resources:
   requests:
     cpu: 10m
-    memory: 64Mi
+    memory: 128Mi
   limits:
-    memory: 256Mi
+    memory: 128Mi
 
 podDisruptionBudget:
   enabled: true
