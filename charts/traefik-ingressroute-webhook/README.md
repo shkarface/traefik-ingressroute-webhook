@@ -92,7 +92,7 @@ The commands below work with OpenSSL 3+, and with LibreSSL as shipped on macOS.
 
    ```bash
    kubectl -n "$NS" create secret tls "$SVC-tls" --cert=tls.crt --key=tls.key \
-     --dry-run=client -o yaml | kubectl apply -f -
+     --dry-run=client -o yaml | kubectl replace -f -
    ```
 
 Keep `tls.key` and `ca.key` out of git. With GitOps, store the Secret through

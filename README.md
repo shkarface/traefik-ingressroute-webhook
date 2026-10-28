@@ -40,6 +40,17 @@ helm lint charts/traefik-ingressroute-webhook
 docker build -t traefik-ingressroute-webhook:dev .
 ```
 
+End-to-end tests create a throwaway Kind cluster (with its own kubeconfig),
+install cert-manager, the Traefik CRDs and the chart, and exercise admission in
+both certificate modes. They need Docker, `kind`, `helm`, `kubectl` and
+`openssl`:
+
+```bash
+test/e2e/e2e.sh            # both modes
+test/e2e/e2e.sh existing-secret
+KEEP_CLUSTER=1 test/e2e/e2e.sh cert-manager
+```
+
 ## Releasing
 
 Push a `vX.Y.Z` tag. The release workflow builds and pushes a multi-arch image
