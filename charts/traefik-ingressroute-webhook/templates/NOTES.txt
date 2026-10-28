@@ -1,0 +1,12 @@
+{{ include "tirw.fullname" . }} is validating traefik.io/v1alpha1 IngressRoutes on CREATE and UPDATE.
+
+Failure policy: {{ .Values.webhook.failurePolicy }}
+{{- if .Values.certManager.enabled }}
+Serving certificate: cert-manager ({{ if .Values.certManager.issuerRef }}{{ .Values.certManager.issuerRef.kind }}/{{ .Values.certManager.issuerRef.name }}{{ else }}self-signed Issuer{{ end }})
+{{- else }}
+Serving certificate: existing secret {{ include "tirw.tlsSecretName" . }}. Replace it before it expires;
+the webhook reloads it without a restart.
+{{- end }}
+
+Check it is ready:
+  kubectl -n {{ .Release.Namespace }} get deploy {{ include "tirw.fullname" . }}

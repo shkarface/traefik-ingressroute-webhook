@@ -1,0 +1,95 @@
+# -- Number of webhook replicas. Keep at least 2: with failurePolicy Fail,
+# IngressRoute writes are blocked while no replica is ready.
+replicaCount: 2
+
+image:
+  repository: ghcr.io/shkarface/traefik-ingressroute-webhook
+  # -- Defaults to the chart appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  # -- Defaults to the release fullname.
+  name: ""
+  annotations: {}
+
+# -- Log level: debug, info, error, or an integer verbosity.
+logLevel: info
+
+webhook:
+  # -- Fail rejects IngressRoute writes when the webhook is unreachable;
+  # Ignore admits them unvalidated.
+  failurePolicy: Fail
+  timeoutSeconds: 5
+  # -- Namespaces never sent to the webhook. The release namespace is always
+  # excluded. Ignored when namespaceSelector is set.
+  excludedNamespaces:
+    - kube-system
+  # -- Overrides the default namespaceSelector built from excludedNamespaces.
+  namespaceSelector: {}
+  objectSelector: {}
+
+certManager:
+  # -- Issue the serving certificate with cert-manager and let its CA injector
+  # fill the webhook caBundle. When false, provide existingSecret instead; see
+  # the chart README for generating a certificate yourself.
+  enabled: true
+  # -- Existing issuer, e.g. {kind: ClusterIssuer, name: internal-ca}. Empty
+  # creates a self-signed Issuer in the release namespace.
+  issuerRef: {}
+  duration: 8760h
+  renewBefore: 720h
+
+# -- Pre-created serving certificate, used when certManager.enabled is false.
+existingSecret:
+  # -- kubernetes.io/tls Secret in the release namespace with tls.crt and tls.key.
+  name: ""
+  # -- Base64-encoded PEM of the CA that signed tls.crt, written to the
+  # webhook caBundle so the API server trusts it.
+  caBundle: ""
+
+metrics:
+  enabled: true
+  port: 8080
+  serviceMonitor:
+    # -- Requires the Prometheus Operator CRDs.
+    enabled: false
+    interval: 30s
+    labels: {}
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+priorityClassName: ""
+nodeSelector: {}
+tolerations: []
+affinity: {}
+# -- Defaults to spreading replicas across nodes.
+topologySpreadConstraints: []

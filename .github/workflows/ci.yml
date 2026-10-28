@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - name: go mod tidy
+        run: go mod tidy -diff
+      - run: go vet ./...
+      - run: go test -race -coverprofile=coverage.out ./...
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.15.0
+
+  chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - run: go install github.com/yannh/kubeconform/cmd/kubeconform@v0.8.0
+      - run: helm lint charts/traefik-ingressroute-webhook
+      - name: Render and validate
+        run: |
+          crds='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+          while read -r args; do
+            echo "::group::helm template ${args:-(defaults)}"
+            # shellcheck disable=SC2086
+            helm template ci charts/traefik-ingressroute-webhook -n webhooks $args \
+              | kubeconform -strict -summary -schema-location default -schema-location "$crds"
+            echo "::endgroup::"
+          done <<'VARIANTS'
+
+          --set certManager.enabled=false --set existingSecret.name=webhook-tls --set existingSecret.caBundle=Y2EK
+          --set certManager.issuerRef.kind=ClusterIssuer --set certManager.issuerRef.name=ca --set metrics.serviceMonitor.enabled=true
+          --set metrics.enabled=false --set podDisruptionBudget.enabled=false --set serviceAccount.create=false
+          VARIANTS
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,0 +1,19 @@
+version: 2
+updates:
+  # Traefik bumps also need the replace directives in go.mod and
+  # third_party/traefik-dynamic-ext re-checked against the new Traefik go.mod.
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      kubernetes:
+        patterns: ["k8s.io/*", "sigs.k8s.io/*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly

@@ -1,0 +1,18 @@
+apiVersion: v2
+name: traefik-ingressroute-webhook
+description: Validating admission webhook for Traefik IngressRoutes
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.27.0-0"
+home: https://github.com/shkarface/traefik-ingressroute-webhook
+sources:
+  - https://github.com/shkarface/traefik-ingressroute-webhook
+keywords:
+  - traefik
+  - ingressroute
+  - admission-webhook
+  - validation
+maintainers:
+  - name: shkarface
+    url: https://github.com/shkarface

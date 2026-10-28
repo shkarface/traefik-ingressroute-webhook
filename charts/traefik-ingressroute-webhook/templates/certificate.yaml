@@ -1,0 +1,34 @@
+{{- if .Values.certManager.enabled }}
+{{- if not .Values.certManager.issuerRef }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "tirw.fullname" . }}-selfsigned
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tirw.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+---
+{{- end }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "tirw.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tirw.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "tirw.tlsSecretName" . }}
+  duration: {{ .Values.certManager.duration }}
+  renewBefore: {{ .Values.certManager.renewBefore }}
+  dnsNames:
+    {{- include "tirw.dnsNames" . | fromJsonArray | toYaml | nindent 4 }}
+  issuerRef:
+    {{- if .Values.certManager.issuerRef }}
+    {{- toYaml .Values.certManager.issuerRef | nindent 4 }}
+    {{- else }}
+    kind: Issuer
+    name: {{ include "tirw.fullname" . }}-selfsigned
+    {{- end }}
+{{- end }}

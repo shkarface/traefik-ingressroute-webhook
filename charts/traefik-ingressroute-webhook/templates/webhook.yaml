@@ -1,0 +1,47 @@
+{{- if not .Values.certManager.enabled }}
+{{- $_ := required "existingSecret.caBundle is required when certManager.enabled is false" .Values.existingSecret.caBundle }}
+{{- end }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: {{ include "tirw.fullname" . }}
+  labels:
+    {{- include "tirw.labels" . | nindent 4 }}
+  {{- if .Values.certManager.enabled }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "tirw.fullname" . }}
+  {{- end }}
+webhooks:
+  - name: ingressroutes.traefik-ingressroute-webhook.shkarface.github.io
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    failurePolicy: {{ .Values.webhook.failurePolicy }}
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds }}
+    clientConfig:
+      service:
+        name: {{ include "tirw.fullname" . }}
+        namespace: {{ .Release.Namespace }}
+        path: /validate-traefik-io-v1alpha1-ingressroute
+      {{- if not .Values.certManager.enabled }}
+      caBundle: {{ .Values.existingSecret.caBundle }}
+      {{- end }}
+    rules:
+      - apiGroups: ["traefik.io"]
+        apiVersions: ["v1alpha1"]
+        resources: ["ingressroutes"]
+        operations: ["CREATE", "UPDATE"]
+        scope: Namespaced
+    namespaceSelector:
+      {{- if .Values.webhook.namespaceSelector }}
+      {{- toYaml .Values.webhook.namespaceSelector | nindent 6 }}
+      {{- else }}
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            {{- prepend .Values.webhook.excludedNamespaces .Release.Namespace | uniq | toYaml | nindent 12 }}
+      {{- end }}
+    {{- with .Values.webhook.objectSelector }}
+    objectSelector:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
