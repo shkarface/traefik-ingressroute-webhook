@@ -89,6 +89,10 @@ func TestRuleSyntax(t *testing.T) {
 		{"v2 multi host in v3", "Host(`a.com`, `b.com`)", "", false},
 		{"v2 multi host with v2 syntax", "Host(`a.com`, `b.com`)", "v2", true},
 		{"bad syntax value", "Host(`a.com`)", "v4", false},
+		{"wildcard subdomain host", "Host(`*.example.com`)", "", true},
+		{"ip host", "Host(`10.0.0.1`)", "", true},
+		{"host is not a hostname", "Host(`/`)", "", false},
+		{"comma-separated hosts in one value", "Host(`a.com,b.com`)", "", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
